@@ -1,0 +1,53 @@
+# Model arguments
+model_name_or_path: martimfasantos/TinyLlama-1.1B-MT-SFT
+model_revision: main
+torch_dtype: bfloat16
+attn_implementation: flash_attention_2
+
+# Data training arguments
+dataset_mixer:
+  sardinelab/MT-pref: 1.0
+dataset_splits:
+- train
+preprocessing_num_workers: 12
+
+# SLiC-DPO trainer config
+task_name: mt
+algorithm: slic-dpo
+bf16: true
+do_eval: true
+contrast_loss_type: hinge
+optimizer_type: rmsprop
+sft_type: token
+gradient_accumulation_steps: 32
+beta: 0.1
+lambda_sft: 0.0
+lambda_contrast: 1.0
+reference_free: false
+learning_rate: 1.0e-07
+num_train_epochs: 3
+per_device_train_batch_size: 1
+per_device_eval_batch_size: 4
+max_seq_length: 2048
+max_steps: -1
+eval_steps: 8000
+gradient_checkpointing: true
+gradient_checkpointing_kwargs:
+  use_reentrant: False
+log_level: info
+logging_steps: 5  
+evaluation_strategy: steps
+logging_strategy: steps
+lr_scheduler_type: cosine
+output_dir: /outputs/TinyLlama-1.1B-MT-SLiC-DPO
+run_name: TinyLlama-1.1B-MT-SLiC-DPO
+overwrite_output_dir: true
+push_to_hub: false
+remove_unused_columns: true
+report_to:
+- wandb
+save_strategy: "steps"
+save_steps: 500
+save_total_limit: 1
+seed: 42
+warmup_ratio: 0.1
