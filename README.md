@@ -1,25 +1,25 @@
-# DPO-$\gamma$ & SLiC-DPO - New Preference Optimization Methods
+# DPO-γ & SLiC-DPO - New Preference Optimization Methods
 
-This repository contains the code and released models for **DPO-$\gamma$** and **SLiC-DPO**, two innovative methods for preference optimization. These approaches offer substantial improvements over state-of-the-art methods like Direct Preference Optimization (DPO) when applied to Small Language Models (SLMs)[^1], particularly in tasks such as machine translation and summarization.
+This repository contains the code and released models for **DPO-γ** and **SLiC-DPO**, two innovative methods for preference optimization. These approaches offer substantial improvements over state-of-the-art methods like Direct Preference Optimization (DPO) when applied to Small Language Models (SLMs)[^1], particularly in tasks such as machine translation and summarization.
 
-Notably, results demonstrate that our proposed approach, DPO-$\gamma$, outperforms all other preference optimization methods considered in the machine translation and summarization tasks. 
+Notably, results demonstrate that our proposed approach, **DPO-γ, outperforms all other preference optimization methods considered in the machine translation and summarization tasks**. 
 
-All trained models are available for download [here](https://huggingface.co/martimfasantos)
+:robot: All trained models are available for download [here](https://huggingface.co/martimfasantos).
 
-For a detailed exploration of the algorithms and results, refer to my [thesis repository](https://github.com/martimfasantos/MSc-Thesis). 
+:scroll: For a detailed exploration of the algorithms and results, refer to my [thesis repository](https://github.com/martimfasantos/MSc-Thesis). 
 
 [^1]: The definition of “small” is subjective and relative. We consider the upper limit of 5B parameters as for the size of SLMs, as done in state-of-the-art papers.
 
 ---
 
 
-## DPO-$\gamma$
+## DPO-γ
 
-This algorithm combines the policy objective from DPO and SimPO’s target reward margin term, $\gamma$ > 0, introduced to the Bradley-Terry objective to ensure that the reward for the winning response, \( r(x, y_w) \), exceeds the reward for the losing response, \( r(x, y_l) \), by at least  $\gamma$. The resulting objective function for DPO-$\gamma$ is defined as follows:
+This algorithm combines the policy objective from DPO and SimPO’s target reward margin term, γ > 0, introduced to the Bradley-Terry objective to ensure that the reward for the winning response, _r(x, y<sub>w</sub>)_, exceeds the reward for the losing response, _r(x, y<sub>l</sub>)_, by at least γ. The resulting objective function for DPO-γ is defined as follows:
 
 ![alt text](res/dpo-gamma-objective.png)
 
-where \( \pi_{\text{ref}} = \pi_{\text{SFT}} \). Similarly to DPO, an implicit reward can be fitted in such a way that the optimal policy simply becomes \( \pi_\theta \).
+where π<sub>ref</sub> = π<sub>SFT</sub>. Similarly to DPO, an implicit reward can be fitted in such a way that the optimal policy simply becomes π<sub>θ</sub>.
 
 ---
 
@@ -33,10 +33,10 @@ Also aligning with DPO’s objective, we implement another custom approach, **SL
 
 
 ### Hyperparameter tuning
-Hyperparameter tuning is crucial for these algorithms (and other preference optimization algorithms in general). The three main hyperparameters of DPO-$\gamma$ and SLiC-DPO to focus on are `learning_rate`, `beta`, and `gamma` (we recommend keeping the total batch size fixed at 128).
-- `learning_rate`: It is the most critical hyperparameter for preference optimization. A large learning rate (e.g., 1e-5) can significantly degrade performance, causing the model to produce incoherent sentences or completely repetitive responses. We recommend grid searching over 5e-8, 1e-7, 2e-7, and 3e-7, if resources allow. We find that a smaller learning rate (e.g., 1e-7) is more suitable for reasoning intensive domains like math for both DPO, DPO-$\gamma$ and SLiC-DPO.
+Hyperparameter tuning is crucial for these algorithms (and other preference optimization algorithms in general). The three main hyperparameters of DPO-γ and SLiC-DPO to focus on are `learning_rate`, `beta`, and `gamma` (we recommend keeping the total batch size fixed at 128).
+- `learning_rate`: It is the most critical hyperparameter for preference optimization. A large learning rate (e.g., 1e-5) can significantly degrade performance, causing the model to produce incoherent sentences or completely repetitive responses. We recommend grid searching over 5e-8, 1e-7, 2e-7, and 3e-7, if resources allow. We find that a smaller learning rate (e.g., 1e-7) is more suitable for reasoning intensive domains like math for both DPO, DPO-γ and SLiC-DPO.
   
-- `beta`: Beta controls the reward scaling between winning and losing responses. DPO-$\gamma$ requires a similiar `beta` than DPO. In our work, we used a beta of `0.1` but we recognize that a further analysis and fine-tuning of this value could yield better results.
+- `beta`: Beta controls the reward scaling between winning and losing responses. DPO-γ requires a similiar `beta` than DPO. In our work, we used a beta of `0.1` but we recognize that a further analysis and fine-tuning of this value could yield better results.
   
 - `gamma`: Gamma controls the target reward margin. We recommend using `0.5` as a starting point for `gamma` and grid searching between `0` and `1`. A well-tuned `gamma` can provide a modest improvement for our algorithms, but it is not as critical as other hyperparameters.
 
@@ -99,7 +99,7 @@ python -m pip install flash-attn --no-build-isolation
 
 ## Training Scripts
 
-We provide some examples of training config files for the training setups reported in the work. The training config is set for 4 NVIDIA RTX A6000 48GB GPUs. You may need to adjust `num_processes` and `per_device_train_batch_size` based on your computation environment. 
+We provide some examples of training config files for the training setups reported in our work. The training config is optimized for 4 NVIDIA RTX A6000 48GB GPUs. You may need to adjust `num_processes` and `per_device_train_batch_size` based on your computation environment. 
 
 #### Machine Translation
 * EuroLLM 1.7B:
@@ -142,7 +142,7 @@ We compare our models against state-of-the-art models using commonly used automa
 
 We also study the effectiveness of preference learning algorithms by **assessing their alignment with human preferences**, specially when considering small LLMs.
 
-Our results show that **DPO-$\gamma$ outperforms all preference optimization methods considered in the machine translation and summarization tasks** and **is capable of further aligning the models with human preferences.**
+:dart: Our results show that **DPO-γ outperforms all preference optimization methods considered in the machine translation and summarization tasks** and **is capable of further aligning the models with human preferences.**
 
 For further results and details on the evaluation and alignment with human preferences, please refer to [this repo](https://github.com/martimfasantos/MSc-Thesis).
 
