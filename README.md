@@ -33,14 +33,14 @@ Also aligning with DPO’s objective, we implement another custom approach, **SL
 
 
 ### Hyperparameter tuning
-Hyperparameter tuning is crucial for these algorithms (and other preference optimization algorithms in general). The three main hyperparameters of DPO-γ and SLiC-DPO to focus on are `learning_rate`, `beta`, and `gamma` (we recommend keeping the total batch size fixed at 128).
+Hyperparameter tuning is crucial for these algorithms (and other preference optimization algorithms in general). The three main hyperparameters of DPO-γ and SLiC-DPO to focus on are `learning_rate`, `beta`, and `gamma` (we recommend keeping the total batch size fixed at 128 for machine translation and 64 for summarization).
 - `learning_rate`: It is the most critical hyperparameter for preference optimization. A large learning rate (e.g., 1e-5) can significantly degrade performance, causing the model to produce incoherent sentences or completely repetitive responses. We recommend grid searching over 5e-8, 1e-7, 2e-7, and 3e-7, if resources allow. We find that a smaller learning rate (e.g., 1e-7) is more suitable for reasoning intensive domains like math for both DPO, DPO-γ and SLiC-DPO.
   
 - `beta`: Beta controls the reward scaling between winning and losing responses. DPO-γ requires a similiar `beta` than DPO. In our work, we used a beta of `0.1` but we recognize that a further analysis and fine-tuning of this value could yield better results.
   
 - `gamma`: Gamma controls the target reward margin. We recommend using `0.5` as a starting point for `gamma` and grid searching between `0` and `1`. A well-tuned `gamma` can provide a modest improvement for our algorithms, but it is not as critical as other hyperparameters.
 
-**Training Hyperparameters for Released Models**
+**Training Hyperparameters for Released Models for both tasks**
 | Setting           | β   | γ   | Learning rate |
 |-------------------|-----|-----|----------------|
 | [EuroLLM-1.7B-Instruct](https://huggingface.co/utter-project/EuroLLM-1.7B-Instruct)      | 0.1 | 0.5 | 1e-7           |
@@ -104,25 +104,25 @@ We provide some examples of training config files for the training setups report
 #### Machine Translation
 * EuroLLM 1.7B:
 ```shell
-ACCELERATE_LOG_LEVEL=info accelerate launch --config_file accelerate_configs/deepspeed_zero3.yaml algorithms/run_custom_po.py training_configs/eurollm-1.7b/mt/eurollm-1.7b-it-dpo-gamma-mt.yaml
+ACCELERATE_LOG_LEVEL=info accelerate launch --config_file accelerate_configs/deepspeed_zero3.yaml algorithms/run_custom_po.py training_configs/eurollm-1.7b/mt/eurollm-1.7b-it-mt-dpo-gamma.yaml
 ```
 * Gemma-2 2B:
 ```shell
-ACCELERATE_LOG_LEVEL=info accelerate launch --config_file accelerate_configs/deepspeed_zero3.yaml algorithms/run_custom_po.py training_configs/gemma-2-2b/mt/gemma-2-2b-it-dpo-gamma-mt.yaml
+ACCELERATE_LOG_LEVEL=info accelerate launch --config_file accelerate_configs/deepspeed_zero3.yaml algorithms/run_custom_po.py training_configs/gemma-2-2b/mt/gemma-2-2b-it-mt-dpo-gamma.yaml
 ```
 * TinyLlama 1.1B:
 ```shell
-ACCELERATE_LOG_LEVEL=info accelerate launch --config_file accelerate_configs/deepspeed_zero3.yaml algorithms/run_custom_po.py training_configs/tinyllama-1.1b/mt/tinyllama-1.1b-dpo-gamma-mt.yaml
+ACCELERATE_LOG_LEVEL=info accelerate launch --config_file accelerate_configs/deepspeed_zero3.yaml algorithms/run_custom_po.py training_configs/tinyllama-1.1b/mt/tinyllama-1.1b-mt-dpo-gamma.yaml
 ```
 
 #### Summarization
 * Gemma-2 2B:
 ```shell
-ACCELERATE_LOG_LEVEL=info accelerate launch --config_file accelerate_configs/deepspeed_zero3.yaml algorithms/run_custom_po.py training_configs/gemma-2-2b/sum/gemma-2-2b-it-dpo-gamma-sum.yaml
+ACCELERATE_LOG_LEVEL=info accelerate launch --config_file accelerate_configs/deepspeed_zero3.yaml algorithms/run_custom_po.py training_configs/gemma-2-2b/sum/gemma-2-2b-sum-dpo-gamma.yaml
 ```
 * TinyLlama 1.1B:
 ```shell
-ACCELERATE_LOG_LEVEL=info accelerate launch --config_file accelerate_configs/deepspeed_zero3.yaml algorithms/run_custom_po.py training_configs/tinyllama-1.1b/sum/tinyllama-1.1b-dpo-gamma-sum.yaml
+ACCELERATE_LOG_LEVEL=info accelerate launch --config_file accelerate_configs/deepspeed_zero3.yaml algorithms/run_custom_po.py training_configs/tinyllama-1.1b/sum/tinyllama-1.1b-sum-dpo-gamma.yaml
 ```
 
 ## Evaluation
