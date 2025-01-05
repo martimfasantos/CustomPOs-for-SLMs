@@ -83,6 +83,8 @@ direct you to the [PyTorch Installation Page](https://pytorch.org/get-started/pr
 pip install torch==2.2.2 torchvision==0.17.2 torchaudio==2.2.2 --index-url https://download.pytorch.org/whl/cu121
 ```
 
+Ensure that CUDA `12.1` is installed on your system. If it's not already installed, you can download it from the official NVIDIA website: [CUDA 12.1 Download Archive](https://developer.nvidia.com/cuda-12-1-0-download-archive).
+
 You can then install the remaining package dependencies of [alignment-handbook](https://github.com/huggingface/alignment-handbook) as follows:
 
 ```shell
