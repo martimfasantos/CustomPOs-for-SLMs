@@ -4,7 +4,7 @@ This repository contains the code and released models for **DPO-γ** and **SLiC-
 
 Notably, results demonstrate that our proposed approach, **DPO-γ, outperforms all other preference optimization methods considered in the machine translation and summarization tasks**. 
 
-:robot: All trained models are available for download [here](https://huggingface.co/martimfasantos).
+:robot: All trained models are available [here](https://huggingface.co/martimfasantos).
 
 :scroll: For a detailed exploration of the algorithms and results, refer to my [thesis repository](https://github.com/martimfasantos/MSc-Thesis). 
 
