@@ -36,10 +36,10 @@ gradient_checkpointing_kwargs:
   use_reentrant: False
 log_level: info
 logging_steps: 5  
-evaluation_strategy: steps
+evaluation_strategy: "no"
 logging_strategy: steps
 lr_scheduler_type: cosine
-output_dir: /outputs/gemma-2-2b-it-MT-DPO
+output_dir: outputs/gemma-2-2b-it-MT-DPO
 run_name: gemma-2-2b-it-MT-DPO
 overwrite_output_dir: true
 push_to_hub: false

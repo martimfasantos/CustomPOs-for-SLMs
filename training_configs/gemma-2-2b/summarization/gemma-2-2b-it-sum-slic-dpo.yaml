@@ -43,7 +43,7 @@ logging_steps: 5
 evaluation_strategy: steps
 logging_strategy: steps
 lr_scheduler_type: cosine
-output_dir: /outputs/gemma-2-2b-Sum-SLiC-DPO
+output_dir: outputs/gemma-2-2b-Sum-SLiC-DPO
 run_name: gemma-2-2b-Sum-SLiC-DPO
 overwrite_output_dir: true
 push_to_hub: false
