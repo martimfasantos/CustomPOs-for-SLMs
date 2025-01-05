@@ -1,10 +1,17 @@
 from dataclasses import dataclass, field
-from typing import Dict, Literal, Optional
+from typing import Dict, Literal, Optional, Any
 from transformers import TrainingArguments
 
 
 @dataclass
 class CustomPOConfig(TrainingArguments):
+    r"""
+    Configuration class for the [`CustomPOTrainer`].
+
+    Using [`~transformers.HfArgumentParser`] we can turn this class into
+    [argparse](https://docs.python.org/3/library/argparse#module-argparse) arguments that can be specified on the
+    command line.
+    """
 
     # task parameters
     task_name: Optional[str] = field(default="mt", metadata={"help": "the task to run"}) # mt, summarization, etc.
@@ -41,12 +48,9 @@ class CustomPOConfig(TrainingArguments):
     preference_method: Optional[str] = field(default="b-w", metadata={"help": "preference method: b/w; all; strict"})
 
     # training parameters
-    model_name_or_path: Optional[str] = field(
-        default="haoranxu/ALMA-7B",
-        metadata={"help": "the location of the SFT model name or path"},
-    )
     learning_rate: Optional[float] = field(default=5e-07, metadata={"help": "optimizer learning rate"})
     lr_scheduler_type: Optional[str] = field(default="linear", metadata={"help": "the lr scheduler type"})
+    label_pad_token_id: Optional[int] = field(default=-100, metadata={"help": "the label pad token id"})
     warmup_steps: Optional[int] = field(default=150, metadata={"help": "the number of warmup steps"})
     weight_decay: Optional[float] = field(default=0.05, metadata={"help": "the weight decay"})
     warmup_ratio: Optional[float] = field(default=0.1, metadata={"help": "warmup ratio"})
@@ -59,15 +63,6 @@ class CustomPOConfig(TrainingArguments):
     gradient_checkpointing: Optional[bool] = field(
         default=True, metadata={"help": "whether to use gradient checkpointing"}
     )
-
-    load_in_8bit: Optional[bool] = field(default=False, metadata={"help": "load model in 8 bit"})
-    use_flash_attention_2: Optional[bool] = field(default=False, metadata={"help": "use flash attention"})
-    low_cpu_mem_usage: Optional[bool] = field(default=False, metadata={"help": "use low cpu memory"})
-    use_peft: Optional[bool] = field(default=False, metadata={"help": "use peft configuration"})
-    lora_alpha: Optional[float] = field(default=32, metadata={"help": "the lora alpha parameter"})
-    lora_dropout: Optional[float] = field(default=0.05, metadata={"help": "the lora dropout parameter"})
-    lora_r: Optional[int] = field(default=16, metadata={"help": "the lora r parameter"})
-    lora_modules: Optional[str] = field(default="q_proj v_proj k_proj out_proj fc_in fc_out wte", metadata={"help": "the lora target modules"})
 
     # specific parameters
     contrast_loss_type: Optional[str] = field(
@@ -94,14 +89,16 @@ class CustomPOConfig(TrainingArguments):
     label_smoothing: Optional[float] = field(default=0.0, metadata={"help": "label smoothing"})
 
     max_prompt_length: Optional[int] = field(default=256, metadata={"help": "the maximum prompt length"})
-    max_length: Optional[int] = field(default=512, metadata={"help": "the maximum sequence length"})
+    max_seq_length: Optional[int] = field(default=512, metadata={"help": "the maximum sequence length"})
     num_train_epochs: Optional[int] = field(default=3, metadata={"help": "max number of training steps"}) # 4 epochs
     logging_steps: Optional[int] = field(default=10, metadata={"help": "the logging frequency"})
     save_steps: Optional[int] = field(default=500, metadata={"help": "the saving frequency"})
     eval_steps: Optional[int] = field(default=100, metadata={"help": "the evaluation frequency"})
 
+    model_init_kwargs: Optional[dict[str, Any]] = None
+    ref_model_init_kwargs: Optional[dict[str, Any]] = None
+    
     output_dir: Optional[str] = field(default="./results", metadata={"help": "the output directory"})
-
 
     # instrumentation
     sanity_check: Optional[bool] = field(default=False, metadata={"help": "only train on 1000 samples"})

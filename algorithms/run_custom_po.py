@@ -62,13 +62,8 @@ def apply_sum_template(example, algorithm):
 
     return example
 
-# same dataset for all algorithms
+# same dataset for all algorithms - no need to apply any template
 def apply_mt_template(example, algorithm):
-    if algorithm in ["sft", "dpo", "cpo", "simpo", "dpo-gamma", "slic", "slic-dpo"]:
-        example["prompt"] = example["prompt"]
-        example["chosen"] = example["chosen"]
-        example["rejected"] = example["rejected"]
-
     return example
 
 
@@ -110,8 +105,8 @@ def main():
         data_args,
         splits=data_args.dataset_splits,
         configs=data_args.dataset_configs,
-        columns_to_keep=["prompt", "chosen", "rejected"] if training_args.task == "mt"
-                        else ["info", "summaries", "choice"] if training_args.task == "sum" 
+        columns_to_keep=["prompt", "chosen", "rejected"] if training_args.task_name == "mt"
+                        else ["info", "summaries", "choice"] if training_args.task_name == "sum" 
                         else None,
         # seed=training_args.seed,
     )
@@ -135,13 +130,12 @@ def main():
             fn_kwargs={
                 "algorithm": training_args.algorithm
             },
-            remove_columns=column_names,
+            remove_columns=None if training_args.task_name == "mt" else column_names,
             desc="Formatting comparisons with prompt template",
         )
 
     train_dataset = raw_datasets["train"]
-    eval_dataset = raw_datasets["validation"] if training_args.task_name == "sum" and training_args.algorithm == "sft" \
-        else raw_datasets["validation"].select(range(int(0.05 * len(raw_datasets["validation"]))))
+    eval_dataset = raw_datasets["validation"] if training_args.task_name == "sum" else None
 
     if training_args.shuffle:
         train_dataset = train_dataset.shuffle(seed=42)
@@ -158,42 +152,13 @@ def main():
             model_args.model_name_or_path,
             torch_dtype=torch.bfloat16,
             load_in_8bit=model_args.load_in_8bit,
-            use_cache=False if model_args.gradient_checkpointing else True,
+            use_cache=False if training_args.gradient_checkpointing else True,
         )
         model_ref.eval()
     else:
         model_ref = None
 
-
-    #########################
-    # Initialize training arguments:
-    #########################
-    training_args = TrainingArguments(
-        per_device_train_batch_size=training_args.per_device_train_batch_size,
-        per_device_eval_batch_size=training_args.per_device_eval_batch_size,
-        num_train_epochs=training_args.num_train_epochs,
-        logging_steps=training_args.logging_steps,
-        save_steps=training_args.save_steps,
-        gradient_accumulation_steps=training_args.gradient_accumulation_steps,
-        gradient_checkpointing=training_args.gradient_checkpointing,
-        learning_rate=training_args.learning_rate,
-        evaluation_strategy="no" if training_args.no_eval else "steps",
-        eval_steps=training_args.eval_steps,
-        output_dir=training_args.output_dir,
-        report_to=training_args.report_to,
-        lr_scheduler_type=training_args.lr_scheduler_type,
-        optim=training_args.optimizer_type,
-        bf16=True,
-        remove_unused_columns=False,
-        run_name=training_args.run_name,
-        warmup_ratio=training_args.warmup_ratio,
-        save_strategy="steps",
-        save_only_model=True,
-        save_safetensors=True,
-        adam_beta2=0.95,
-    )
-
-    model = training_args.model_name_or_path
+    model = model_args.model_name_or_path
 
 
     #########################
@@ -210,7 +175,7 @@ def main():
         tokenizer=tokenizer,
         loss_type=training_args.contrast_loss_type, 
         max_prompt_length=training_args.max_prompt_length,
-        max_length=training_args.max_length,
+        max_length=training_args.max_seq_length,
         generate_during_eval=training_args.generate_during_eval,
         average_log_prob=training_args.average_log_prob,
         reference_free=training_args.reference_free,
@@ -218,7 +183,7 @@ def main():
         lambda_contrast=training_args.lambda_contrast,
         sft_type=training_args.sft_type,
         margin=training_args.margin,
-        peft_config=get_peft_config(training_args),
+        peft_config=get_peft_config(model_args),
     )
 
     ###############

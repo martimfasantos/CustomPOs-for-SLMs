@@ -30,15 +30,21 @@ from transformers import DataCollator, PreTrainedModel, PreTrainedTokenizerBase,
 from transformers.trainer_callback import TrainerCallback
 from transformers.trainer_utils import EvalLoopOutput
 
-from trl.import_utils import is_peft_available, is_wandb_available
+from transformers.utils import is_peft_available
+from transformers import AutoModelForCausalLM, is_wandb_available
 from trl.models import PreTrainedModelWrapper, create_reference_model
-from trl.trainer.utils import disable_dropout_in_model, pad_to_length
+from trl.trainer.utils import DPODataCollatorWithPadding, disable_dropout_in_model, pad_to_length
 from transformers.trainer_pt_utils import LengthGroupedSampler, RandomSampler
 import datasets
 
-if is_peft_available():
-    from peft import PeftModel, get_peft_model, prepare_model_for_kbit_training
+from algorithms.custom_po_config import CustomPOConfig
 
+if is_peft_available():
+    from peft import (
+        PeftModel,
+        get_peft_model,
+        prepare_model_for_kbit_training,
+    )
 
 if is_wandb_available():
     import wandb
@@ -151,11 +157,11 @@ class CustomPOTrainer(Trainer):
 
     def __init__(
         self,
-        model: Union[PreTrainedModel, nn.Module] = None,
-        ref_model: Optional[Union[PreTrainedModel, nn.Module]] = None,
+        model: Union[PreTrainedModel, nn.Module, str] = None,
+        ref_model: Optional[Union[PreTrainedModel, nn.Module, str]] = None,
         beta: float = 0.1,
-        loss_type: Literal["sigmoid", "hinge", "simpo"] = "sigmoid",
-        args: TrainingArguments = None,
+        loss_type: Literal["sigmoid", "hinge", "dpo-gamma", "simpo"] = "sigmoid",
+        args: Optional[TrainingArguments] = None,
         data_collator: Optional[DataCollator] = None,
         label_pad_token_id: int = -100,
         padding_value: int = 0,
@@ -195,6 +201,57 @@ class CustomPOTrainer(Trainer):
         margin: float = 0.0,
         phi_star: float = -0.8,
     ):
+        if model is None:
+            raise ValueError("No model provided. Please provide a model to train.")
+
+        if not isinstance(model, str) and ref_model is model:
+            raise ValueError(
+                "`model` and `ref_model` cannot be the same object. If you want `ref_model` to be the "
+                "same as `model`, you must mass a copy of it, or `None` if you use peft."
+            )
+
+        if args.model_init_kwargs is None:
+            model_init_kwargs = {}
+        elif not isinstance(model, str):
+            raise ValueError(
+                "You passed model_kwargs to the CustomPOTrainer. But your model is already instantiated."
+            )
+        else:
+            model_init_kwargs = args.model_init_kwargs
+            model_init_kwargs["torch_dtype"] = (
+                model_init_kwargs["torch_dtype"]
+                if model_init_kwargs["torch_dtype"] in ["auto", None]
+                else getattr(torch, model_init_kwargs["torch_dtype"])
+            )
+        
+        if args.ref_model_init_kwargs is None:
+            ref_model_init_kwargs = {}
+        elif not isinstance(model, str):
+            raise ValueError(
+                "You passed model_kwargs to the CustomPOTrainer. But your model is already instantiated."
+            )
+        else:
+            ref_model_init_kwargs = args.ref_model_init_kwargs
+            ref_model_init_kwargs["torch_dtype"] = (
+                ref_model_init_kwargs["torch_dtype"]
+                if ref_model_init_kwargs["torch_dtype"] in ["auto", None]
+                else getattr(torch, ref_model_init_kwargs["torch_dtype"])
+            )
+
+        if isinstance(model, str):
+            warnings.warn(
+                "You passed a model_id to the CustomPOTrainer. This will automatically create an "
+                "`AutoModelForCausalLM` or a `PeftModel` (if you passed a `peft_config`) for you."
+            )
+            model = AutoModelForCausalLM.from_pretrained(model, **model_init_kwargs)
+        
+        if isinstance(ref_model, str):
+            ref_model = AutoModelForCausalLM.from_pretrained(ref_model, **ref_model_init_kwargs)
+
+        # Initialize this variable to False. This helps tracking the case when `peft_module_casting_to_bf16`
+        # has been called in order to properly call autocast if needed.
+        self._peft_has_been_casted_to_bf16 = False
+         
         if not is_peft_available() and peft_config is not None:
             raise ValueError(
                 "PEFT is not installed and you passed a `peft_config` in the trainer's kwargs, please install it to use the PEFT models"
@@ -264,46 +321,41 @@ class CustomPOTrainer(Trainer):
         else:
             self.ref_model = None
 
-        if data_collator is None:
-            if tokenizer is None:
-                raise ValueError(
-                    "max_length or a tokenizer must be specified when using the default DPODataCollatorWithPadding"
-                )
-            if max_length is None:
-                warnings.warn(
-                    "When using DPODataCollatorWithPadding, you should set `max_length` in the DPOTrainer's init"
-                    " it will be set to `512` by default, but you should do it yourself in the future.",
-                    UserWarning,
-                )
-                max_length = 512
-            if max_prompt_length is None:
-                warnings.warn(
-                    "When using DPODataCollatorWithPadding, you should set `max_prompt_length` in the DPOTrainer's init"
-                    " it will be set to `128` by default, but you should do it yourself in the future.",
-                    UserWarning,
-                )
-                max_prompt_length = 128
-
-            if max_target_length is None and self.is_encoder_decoder:
-                warnings.warn(
-                    "When using DPODataCollatorWithPadding with an encoder decoder architecture, you should set `max_target_length` in the DPOTrainer's init"
-                    " it will be set to `128` by default, but you should do it yourself in the future.",
-                    UserWarning,
-                )
-                max_target_length = 128
-
-            data_collator = DPODataCollatorWithPadding(
-                tokenizer,
-                max_length=max_length,
-                max_prompt_length=max_prompt_length,
-                label_pad_token_id=label_pad_token_id,
-                padding_value=padding_value,
-                truncation_mode=truncation_mode,
-                is_encoder_decoder=self.is_encoder_decoder,
-                max_target_length=max_target_length,
+        if tokenizer is None:
+            raise ValueError(
+                "max_length or a tokenizer must be specified when using the default DPODataCollatorWithPadding"
             )
+        if max_length is None:
+            warnings.warn(
+                "When using DPODataCollatorWithPadding, you should set `max_length` in the DPOTrainer's init"
+                " it will be set to `512` by default, but you should do it yourself in the future.",
+                UserWarning,
+            )
+            max_length = 512
+        if max_prompt_length is None:
+            warnings.warn(
+                "When using DPODataCollatorWithPadding, you should set `max_prompt_length` in the DPOTrainer's init"
+                " it will be set to `128` by default, but you should do it yourself in the future.",
+                UserWarning,
+            )
+            max_prompt_length = 128
 
-            self.max_prompt_length = max_prompt_length
+        if max_target_length is None and self.is_encoder_decoder:
+            warnings.warn(
+                "When using DPODataCollatorWithPadding with an encoder decoder architecture, you should set `max_target_length` in the DPOTrainer's init"
+                " it will be set to `128` by default, but you should do it yourself in the future.",
+                UserWarning,
+            )
+            max_target_length = 128
+
+        self.max_prompt_length = max_prompt_length
+
+        if data_collator is None:
+            data_collator = DPODataCollatorWithPadding(
+                pad_token_id=tokenizer.pad_token_id,
+                label_pad_token_id=args.label_pad_token_id,
+                is_encoder_decoder=self.is_encoder_decoder,
+            )
 
             if args.remove_unused_columns:
                 args.remove_unused_columns = False
