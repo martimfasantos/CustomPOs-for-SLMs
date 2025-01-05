@@ -125,6 +125,7 @@ def is_openai_format(messages: Any) -> bool:
 def get_datasets(
     data_config: DataArguments | dict,
     splits: Optional[List[str]] = None,
+    eval_split_size: Optional[float] = None,
     configs: Optional[List[str]] = None,
     columns_to_keep: Optional[List[str]] = None,
     shuffle: bool = True,
@@ -169,6 +170,7 @@ def get_datasets(
     raw_datasets = mix_datasets(
         dataset_mixer,
         splits=splits,
+        eval_split_size=eval_split_size,
         configs=configs,
         columns_to_keep=columns_to_keep,
         shuffle=shuffle,
@@ -179,6 +181,7 @@ def get_datasets(
 def mix_datasets(
     dataset_mixer: dict,
     splits: Optional[List[str]] = None,
+    eval_split_size: Optional[float] = None,
     configs: Optional[List[str]] = None,
     columns_to_keep: Optional[List[str]] = None,
     shuffle=True,
@@ -200,6 +203,7 @@ def mix_datasets(
             Whether to shuffle the training and testing/validation data.
     """
     splits = ["train", "test"] if splits is None else splits
+    eval_split_size = 1.0 if eval_split_size is None else eval_split_size
     configs = [None] * len(dataset_mixer) if not configs else configs
     columns_to_keep = [] if columns_to_keep is None else columns_to_keep
 
@@ -243,10 +247,14 @@ def mix_datasets(
             raw_datasets["train"] = concatenate_datasets(train_subsets)
     # No subsampling for test datasets to enable fair comparison across models
     if len(raw_val_datasets) > 0:
+        eval_subsets = []
+        for dataset in raw_val_datasets:
+            eval_subset = dataset.select(range(int(eval_split_size * len(dataset))))
+            eval_subsets.append(eval_subset)
         if shuffle:
-            raw_datasets["test"] = concatenate_datasets(raw_val_datasets).shuffle(seed=42)
+            raw_datasets["validation" if "validation" in splits or "valid" in splits else "test"] = concatenate_datasets(eval_subsets).shuffle(seed=42)
         else:
-            raw_datasets["test"] = concatenate_datasets(raw_val_datasets)
+            raw_datasets["validation" if "validation" in splits or "valid" in splits else "test"] = concatenate_datasets(eval_subsets)
 
     if len(raw_datasets) == 0:
         raise ValueError(

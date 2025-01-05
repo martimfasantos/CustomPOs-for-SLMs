@@ -217,7 +217,12 @@ class DataArguments:
     )
     dataset_configs: Optional[List[str]] = field(
         default=None,
-        metadata={"help": "List of dataset config names. If given must be the same length as 'dataset_mixer' keys."},
+        metadata={
+            "help": (
+                "List of dataset config names. If given must be the same length as 'dataset_mixer' keys or, \
+                in case of one 'dataset_mixer' key, it can be a list of config names for that dataset."
+            )
+        },
     )
     preprocessing_num_workers: Optional[int] = field(
         default=None,
